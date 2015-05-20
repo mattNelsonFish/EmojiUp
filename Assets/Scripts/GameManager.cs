@@ -32,6 +32,9 @@ public class GameManager : MonoBehaviour {
         }
     }
 
+    [SerializeField] GameObject mMenuFront;
+    [SerializeField] GameObject mMenuDeckSelect;
+
     void Awake() {
         if (_instance != null) {
             DestroyImmediate(this.gameObject);
@@ -56,12 +59,24 @@ public class GameManager : MonoBehaviour {
 	// Use this for initialization
     void Start() {
         canvasController.ChangeCanvas("mainmenu");
+        mMenuFront.SetActive(true);
+        mMenuDeckSelect.SetActive(false);
 	}
 	
 	// Update is called once per frame
 	void Update () {
 	
 	}
+
+    void chooseDeck() {
+        mMenuFront.SetActive(false);
+        mMenuDeckSelect.SetActive(true);
+    }
+
+    void backFromDeckSelect() {
+        mMenuFront.SetActive(true);
+        mMenuDeckSelect.SetActive(false);
+    }
 
     void playGame() {
         Debug.Log("Play Game pressed");
@@ -88,5 +103,7 @@ public class GameManager : MonoBehaviour {
 
     void quitToMenu() {
         canvasController.ChangeCanvas("mainmenu");
+        mMenuFront.SetActive(true);
+        mMenuDeckSelect.SetActive(false);
     }
 }
