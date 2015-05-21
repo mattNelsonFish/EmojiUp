@@ -10,6 +10,17 @@ public class CanvasController : MonoBehaviour {
     [SerializeField] Canvas rulesCanvas;
     List<Canvas> canvasList;
     List<Canvas> prevList;
+
+    static string msFocusCanvas = "";
+    public static string FocusedCanvas {
+        get {
+            return msFocusCanvas;
+        }
+        private set {
+            msFocusCanvas = value;
+        }
+    }
+
     void Awake() {
         Init();
     }
@@ -40,7 +51,7 @@ public class CanvasController : MonoBehaviour {
 
     public void ChangeCanvas(string canvasName) {
         Canvas temp = GetCanvas(canvasName);
-
+        bool changeSuccess = true;
 
         if (temp != null) {
             canvasName = canvasName.ToLower();
@@ -74,12 +85,17 @@ public class CanvasController : MonoBehaviour {
                     rulesCanvas.gameObject.SetActive(true);
                     break;
                 default:
+                    changeSuccess = false;
                     Debug.LogWarning("unknown canvas wanted, but not found: " + canvasName);
                     break;
+            }
+            if (changeSuccess) {
+                FocusedCanvas = canvasName;
             }
             zeroHiddenCanvases();
             temp.sortingOrder = GetTopmostCanvas().sortingOrder + 1;
             prevList.Clear();
+            prevList.Add(temp);
         }
     }
 
@@ -116,6 +132,7 @@ public class CanvasController : MonoBehaviour {
     /// </summary>
     Canvas GetCanvas(string canvasName) {
         Canvas canvas = null;
+        bool changeSuccess = true;
         canvasName = canvasName.ToLower();
         switch (canvasName) {
             case "mainmenu":
@@ -131,11 +148,31 @@ public class CanvasController : MonoBehaviour {
                 canvas = rulesCanvas;
                 break;
             default:
+                changeSuccess = false;
                 Debug.LogWarning("unknown canvas wanted, but not found: " + canvasName);
                 break;
         }
-
+        if (changeSuccess) {
+            FocusedCanvas = canvasName;
+        }
         return canvas;
+    }
+
+    string canvasToCatName(Canvas canvas) {
+        string catName = "";
+        if (canvas.name == mainmenuCanvas.name) {
+            catName = "mainmenu";
+        }
+        else if (canvas.name == gameCanvas.name) {
+            catName = "game";
+        }
+        else if (canvas.name == backdropCanvas.name) {
+            catName = "backdrop";
+        }
+        else if (canvas.name == rulesCanvas.name) {
+            catName = "rules";
+        }
+        return catName;
     }
 
     void zeroHiddenCanvases() {
@@ -154,6 +191,7 @@ public class CanvasController : MonoBehaviour {
     public void ShowPrevCanvas() {
         if (prevList.Count > 0) {
             HideTopCanvas();
+            FocusedCanvas = canvasToCatName(GetTopmostCanvas());
         }
     }
 }

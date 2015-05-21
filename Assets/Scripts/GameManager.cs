@@ -56,16 +56,33 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-	// Use this for initialization
-    void Start() {
+	void Start() {
         canvasController.ChangeCanvas("mainmenu");
         mMenuFront.SetActive(true);
         mMenuDeckSelect.SetActive(false);
 	}
 	
-	// Update is called once per frame
 	void Update () {
-	
+        if (Input.GetKeyDown(KeyCode.Escape)) {
+            Debug.Log("Escape pressed. Focused canvas is " + CanvasController.FocusedCanvas);
+            if (CanvasController.FocusedCanvas == "mainmenu") {
+                if (mMenuFront.activeSelf) {
+                    Application.Quit();
+                }
+                else if (mMenuDeckSelect.activeSelf) {
+                    QuitToMenu();
+                }
+            }
+            else if (CanvasController.FocusedCanvas == "game") {
+                returnToPrev();
+            }
+            else if (CanvasController.FocusedCanvas == "rules") {
+                returnToPrev();
+            }
+            else if (CanvasController.FocusedCanvas == "backdrop") {
+                Application.Quit();
+            }
+        }
 	}
 
     void chooseDeck() {
@@ -101,9 +118,15 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    void quitToMenu() {
+    public void QuitToMenu() {
         canvasController.ChangeCanvas("mainmenu");
         mMenuFront.SetActive(true);
         mMenuDeckSelect.SetActive(false);
+    }
+
+    public void QuitToDeckSelection() {
+        canvasController.ChangeCanvas("mainmenu");
+        mMenuFront.SetActive(false);
+        mMenuDeckSelect.SetActive(true);
     }
 }

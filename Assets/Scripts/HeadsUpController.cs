@@ -6,7 +6,9 @@ public class HeadsUpController : MonoBehaviour {
 
     [SerializeField] Image readyPanel;
     [SerializeField] Image timerPanel;
+    [SerializeField] Image endgamePanel;
     [SerializeField] Text gameTimerText;
+    [SerializeField] GameObject hudParent;
     DeviceOrientation mPrevOrientation;
 
     public enum Difficulty { EASY, HARD }
@@ -110,7 +112,21 @@ public class HeadsUpController : MonoBehaviour {
         }
     }
 
-    float mAnswerTimer = 0;
+    bool mfEndSooner = false;
+    public bool EndConfirmed {
+        get {
+            return mfEndSooner;
+        }
+        set {
+            if (CurrentGameState == GameState.ENDGAME) {
+                mfEndSooner = value;
+            }
+        }
+    }
+
+    const float END_DURATION_MIN = 2f;
+
+    float mfAnswerTimer = 0;
     const float ANSWER_DELAY = 0.7f;
 
     [SerializeField] Image mLeftImage;
@@ -124,8 +140,12 @@ public class HeadsUpController : MonoBehaviour {
     [SerializeField] Sprite mRightSprite;
     [SerializeField] Sprite mWrongSprite;
 
+    [SerializeField] Text mEndGameText;
+
     void Awake() {
-        meCurrentState = GameState.NONE; 
+        meCurrentState = GameState.NONE;
+        showEndgameStats(false);
+        showHUD(false, true);
     }
 	// Use this for initialization
 	void Start () {
@@ -139,12 +159,20 @@ public class HeadsUpController : MonoBehaviour {
             case GameState.READYING:
                 CurrentDeck = (Resources.Load("Decks/" + UsingDeck) as GameObject).GetComponent<Deck>();
                 showCards(false);
+                showHUD(false);
                 break;
             
             case GameState.INTRO_COUNTDOWN:
                 if (introTimerPlaying && !timerPanelRunning) {
                     introTimerPlaying = false;
-                    mMiddleImage.sprite = CurrentDeck.RandomCard();
+                    Sprite tempSprite = CurrentDeck.RandomCard();
+
+                    if (tempSprite != null) {
+                        mMiddleImage.sprite = tempSprite;
+                    }
+                    else {
+                        GameManager.Instance.QuitToMenu();
+                    }
                     showAnswerBack(false);
                     ChangeGameState(GameState.PLAYING);
                 }
@@ -158,6 +186,7 @@ public class HeadsUpController : MonoBehaviour {
             
             case GameState.PLAYING:
                 GameTimer -= Time.deltaTime;
+                showHUD(true);
                 if (GameTimer < 0) {
                     showCards(false);
                     ChangeGameState(GameState.ENDGAME);
@@ -170,8 +199,8 @@ public class HeadsUpController : MonoBehaviour {
                         
                         gameTimerText.text = "Time Left: " + minutes + ":" + (seconds < 10 ? "0"+seconds : ""+seconds );
                     }
-                    if (mAnswerTimer > 0) {
-                        mAnswerTimer -= Time.deltaTime;
+                    if (mfAnswerTimer > 0) {
+                        mfAnswerTimer -= Time.deltaTime;
                     }
                     else {
                         #if UNITY_EDITOR
@@ -183,16 +212,14 @@ public class HeadsUpController : MonoBehaviour {
                         }
                         #endif
 
-                        Vector3 inAcc = Input.acceleration;
-                        Debug.Log("Input Acceleration: \n  x: " + inAcc.x + "\n  y: " + inAcc.y + "\n  z: " + inAcc.z);
                         //Debug.Log("Orientation: " + Input.deviceOrientation);
                         if (Input.deviceOrientation == DeviceOrientation.FaceDown && mPrevOrientation != DeviceOrientation.FaceDown) {
-                            Debug.Log("(FaceDown) Prev Orientation: " + mPrevOrientation);
+                            //Debug.Log("(FaceDown) Prev Orientation: " + mPrevOrientation);
                             mPrevOrientation = DeviceOrientation.FaceDown;
                             answer(true);
                         }
                         else if (Input.deviceOrientation == DeviceOrientation.FaceUp && mPrevOrientation != DeviceOrientation.FaceUp) {
-                            Debug.Log("(FaceUp) Prev Orientation: " + mPrevOrientation);
+                            //Debug.Log("(FaceUp) Prev Orientation: " + mPrevOrientation);
                             mPrevOrientation = DeviceOrientation.FaceUp;
                             answer(false);
                         }
@@ -230,6 +257,7 @@ public class HeadsUpController : MonoBehaviour {
             case GameState.INTRO_COUNTDOWN:
                     introTimerPlaying = true;
                     showTimerPanel(3.5f, true, 0.25f);
+                    showHUD(false);
 
                     mPrevOrientation = Input.deviceOrientation;
                 break;
@@ -296,7 +324,8 @@ public class HeadsUpController : MonoBehaviour {
             }
             yield return Time.deltaTime;
         }
-        
+
+        showHUD(true);
         if (fadeout) {
             totalTime = 0;
             float initialAlpha = timerPanel.color.a;
@@ -342,11 +371,19 @@ public class HeadsUpController : MonoBehaviour {
         while (timeTillCard > 0) {
             timeTillCard -= Time.deltaTime;
             yield return new WaitForSeconds(Time.deltaTime);
-            mAnswerTimer = ANSWER_DELAY;
+            mfAnswerTimer = ANSWER_DELAY;
         }
         showAnswerBack(false);
-        mMiddleImage.sprite = CurrentDeck.RandomCard();
-        mAnswerTimer = ANSWER_DELAY;
+
+        Sprite tempSprite = CurrentDeck.RandomCard();
+        if (tempSprite != null) {
+            mMiddleImage.sprite = tempSprite;
+        }
+        else {
+            GameManager.Instance.QuitToMenu();
+        }
+
+        mfAnswerTimer = ANSWER_DELAY;
     }
 
     /// <summary>
@@ -383,11 +420,14 @@ public class HeadsUpController : MonoBehaviour {
     }
 
     public void ResetGame() {
+        mfEndSooner = false;
         GameTimer = GameDuration;
         NumberCorrect = 0;
         NumberIncorrect = 0;
         UsingDeck = "";
         showCards(false);
+        showEndgameStats(false);
+        showHUD(true);
         mPrevOrientation = Input.deviceOrientation;
     }
 
@@ -396,11 +436,61 @@ public class HeadsUpController : MonoBehaviour {
         if(CurrentGameState != GameState.ENDGAME){
             timeTillExit = 3f;
         }
-        Debug.Log("You got " + NumberCorrect + " correct, and " + NumberIncorrect + " incorrect in " + GameDuration + " minutes");
         StartCoroutine(EndGameIn(timeTillExit));
     }
 
     private IEnumerator EndGameIn(float timeTillExit) {
-        yield return new WaitForSeconds(0.0f);
+        showCards(false);
+        showHUD(false);
+        showEndgameStats(true);
+        yield return new WaitForSeconds(END_DURATION_MIN);
+        while (!EndConfirmed) {
+            yield return new WaitForSeconds(0.25f);
+        }
+        GameManager.Instance.QuitToDeckSelection();
+        showEndgameStats(false);
+        showHUD(true);
+    }
+
+    void showEndgameStats(bool show) {
+        if (show) {
+            fillEndgameStats();
+        }
+        endgamePanel.gameObject.SetActive(show);
+    }
+
+    void fillEndgameStats() {
+        mEndGameText.text = "Correct: " + NumberCorrect + "\nWrong: " + NumberIncorrect;
+    }
+
+    void showHUD(bool show) {
+        hudParent.SetActive(show);
+    }
+
+    void showHUD(bool show, bool applyAll) {
+        showHUD(true);
+        if (applyAll) {
+            showGameTimer(true);
+            showQuitButton(true);
+            showRulesButton(true);
+        }
+    }
+
+    void showGameTimer(bool show) {
+        if (hudParent.transform.FindChild("GameTimer")) {
+            hudParent.transform.FindChild("GameTimer").gameObject.SetActive(show);
+        }
+    }
+
+    void showQuitButton(bool show) {
+        if (hudParent.transform.FindChild("Quit")) {
+            hudParent.transform.FindChild("Quit").gameObject.SetActive(show);
+        }
+    }
+
+    void showRulesButton(bool show) {
+        if (hudParent.transform.FindChild("Rules")) {
+            hudParent.transform.FindChild("Rules").gameObject.SetActive(show);
+        }
     }
 }
