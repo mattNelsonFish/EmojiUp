@@ -11,15 +11,15 @@ public class HeadsUpController : MonoBehaviour {
     [SerializeField] GameObject hudParent;
     DeviceOrientation mPrevOrientation;
 
-    public enum Difficulty { EASY, HARD }
-    Difficulty mCurrentDifficulty = Difficulty.EASY;
-    public Difficulty CurrentDifficulty {
+    public enum GameMode { SINGLE, DUAL }
+    GameMode mCurrentMode = GameMode.SINGLE;
+    public GameMode CurrentMode {
         get {
-            return mCurrentDifficulty;
+            return mCurrentMode;
         }
         set {
             if (meCurrentState == GameState.NONE || meCurrentState == GameState.READYING) {
-                mCurrentDifficulty = value;
+                mCurrentMode = value;
             }
         }
     }
@@ -283,8 +283,9 @@ public class HeadsUpController : MonoBehaviour {
 
     public void StartNewGame() {
         // GameManager.Instance.CurrentGameType;
-        ChangeGameState(GameState.READYING);
+        meCurrentState = GameState.NONE;
         ResetGame();
+        ChangeGameState(GameState.READYING);
     }
 
     private void showReadyPanel() {
@@ -407,16 +408,16 @@ public class HeadsUpController : MonoBehaviour {
     }
 
     void showAnswerBack(bool show) {
-       // mLeftImageBack.gameObject.SetActive(CurrentDifficulty == Difficulty.EASY ? false : show);
+       // mLeftImageBack.gameObject.SetActive(CurrentMode == GameMode.SINGLE ? false : show);
        // mMiddleImageBack.gameObject.SetActive(show);
-       // mRightImageBack.gameObject.SetActive(CurrentDifficulty == Difficulty.EASY ? false : show);
+       // mRightImageBack.gameObject.SetActive(CurrentDifficulty == GameMode.SINGLE ? false : show);
         mAnswerBack.gameObject.SetActive(show);
     }
 
     void showCards(bool show) {
-        mLeftImage.gameObject.SetActive(CurrentDifficulty == Difficulty.EASY ? false : show);
+        mLeftImage.gameObject.SetActive(CurrentMode == GameMode.SINGLE ? false : show);
         mMiddleImage.gameObject.SetActive(show);
-        mRightImage.gameObject.SetActive(CurrentDifficulty == Difficulty.EASY ? false : show);
+        mRightImage.gameObject.SetActive(CurrentMode == GameMode.SINGLE ? false : show);
     }
 
     public void ResetGame() {
@@ -428,6 +429,7 @@ public class HeadsUpController : MonoBehaviour {
         showCards(false);
         showEndgameStats(false);
         showHUD(true);
+        timerPanelRunning = false;
         mPrevOrientation = Input.deviceOrientation;
     }
 

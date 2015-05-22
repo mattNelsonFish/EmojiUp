@@ -67,6 +67,7 @@ public class GameManager : MonoBehaviour {
             Debug.Log("Escape pressed. Focused canvas is " + CanvasController.FocusedCanvas);
             if (CanvasController.FocusedCanvas == "mainmenu") {
                 if (mMenuFront.activeSelf) {
+                    headsUp.EndGame();
                     Application.Quit();
                 }
                 else if (mMenuDeckSelect.activeSelf) {
@@ -74,10 +75,10 @@ public class GameManager : MonoBehaviour {
                 }
             }
             else if (CanvasController.FocusedCanvas == "game") {
-                returnToPrev();
+                QuitToMenu();
             }
             else if (CanvasController.FocusedCanvas == "rules") {
-                returnToPrev();
+                QuitToMenu();
             }
             else if (CanvasController.FocusedCanvas == "backdrop") {
                 Application.Quit();
